@@ -1,0 +1,243 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== AUTHENTICATION ====================
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==================== TOURS ====================
+model Tour {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  subtitle    String?
+  hero        String?
+  image       String?
+  location    String
+  schedule    String
+  duration    String
+  group       String
+  price       String
+  category    String[]
+  about       String   @db.Text
+  villageId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  village     Village?         @relation(fields: [villageId], references: [id], onDelete: SetNull)
+  itinerary   ItineraryItem[]
+  meetingPoints MeetingPoint[]
+  
+  @@index([slug])
+  @@index([villageId])
+}
+
+model ItineraryItem {
+  id          String   @id @default(cuid())
+  tourId      String
+  title       String
+  minutes     Int
+  description String   @db.Text
+  order       Int      @default(0)
+  tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  
+  @@index([tourId])
+}
+
+model MeetingPoint {
+  id          String   @id @default(cuid())
+  tourId      String
+  type        String
+  icon        String
+  title       String
+  note        String?
+  address     String
+  order       Int      @default(0)
+  tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  
+  @@index([tourId])
+}
+
+// ==================== FOODS/DRINKS/PLACES ====================
+model Dish {
+  id          String   @id @default(cuid())
+  type        String
+  slug        String   @unique
+  title       String
+  subtitle    String?
+  price       String?
+  image       String?
+  badges      String[]
+  about       String[]
+  quote       String?
+  villageId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  village     Village?        @relation(fields: [villageId], references: [id], onDelete: SetNull)
+  gallery     GalleryItem[]
+  location    Location?
+  menuItems   MenuItem[]
+  
+  @@index([slug])
+  @@index([type])
+  @@index([villageId])
+}
+
+model GalleryItem {
+  id          String   @id @default(cuid())
+  dishId      String
+  src         String
+  alt         String?
+  ratio       String?
+  order       Int      @default(0)
+  dish        Dish     @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  
+  @@index([dishId])
+}
+
+model Location {
+  id          String   @id @default(cuid())
+  dishId      String   @unique
+  title       String?
+  desc        String?  @db.Text
+  address     String
+  hours       String?
+  phone       String?
+  mapUrl      String?
+  photo       String?
+  lat         Float?
+  lng         Float?
+  dish        Dish     @relation(fields: [dishId], references: [id], onDelete: Cascade)
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  dishId      String
+  title       String
+  desc        String?  @db.Text
+  price       String?
+  order       Int      @default(0)
+  dish        Dish     @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  
+  @@index([dishId])
+}
+
+// ==================== EVENTS ====================
+model Event {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  subtitle    String?
+  tag         String?
+  category    String[]
+  dateLabel   String?
+  where       String?
+  image       String?
+  href        String?
+  excerpt     String?  @db.Text
+  dateStart   DateTime
+  dateEnd     DateTime
+  time        String?
+  hero        String?
+  about       String[]
+  expect      String[]
+  villageId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  village     Village?         @relation(fields: [villageId], references: [id], onDelete: SetNull)
+  location    EventLocation?
+  highlights  EventHighlight[]
+  schedule    EventSchedule[]
+  gallery     EventGallery[]
+  seo         EventSEO?
+  
+  @@index([slug])
+  @@index([dateStart])
+  @@index([villageId])
+}
+
+model EventLocation {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  name        String
+  lat         Float?
+  lng         Float?
+  address     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model EventHighlight {
+  id          String   @id @default(cuid())
+  eventId     String
+  img         String
+  caption     String?
+  order       Int      @default(0)
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  @@index([eventId])
+}
+
+model EventSchedule {
+  id          String   @id @default(cuid())
+  eventId     String
+  day         String?
+  date        DateTime
+  items       String[]
+  order       Int      @default(0)
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  @@index([eventId])
+}
+
+model EventGallery {
+  id          String   @id @default(cuid())
+  eventId     String
+  src         String
+  alt         String?
+  order       Int      @default(0)
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  @@index([eventId])
+}
+
+model EventSEO {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  description String?  @db.Text
+  keywords    String[]
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+// ==================== VILLAGES ====================
+model Village {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  title       String
+  img         String
+  blurb       String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tours       Tour[]
+  events      Event[]
+  dishes      Dish[]
+  
+  @@index([key])
+}
+
